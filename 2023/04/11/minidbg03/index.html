@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.15.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="动手从零开始构建一个Linux系统下的Debugger，支持对寄存器和内存的读写">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MiniDbg 03: 寄存器和内存">
+<meta property="og:url" content="http://example.com/2023/04/11/minidbg03/">
+<meta property="og:site_name" content="ccz-zhao">
+<meta property="og:description" content="动手从零开始构建一个Linux系统下的Debugger，支持对寄存器和内存的读写">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-04-11T02:25:28.000Z">
+<meta property="article:modified_time" content="2023-04-11T12:04:06.066Z">
+<meta property="article:author" content="zhao">
+<meta property="article:tag" content="minidbg">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2023/04/11/minidbg03/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://example.com/2023/04/11/minidbg03/","path":"2023/04/11/minidbg03/","title":"MiniDbg 03: 寄存器和内存"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>MiniDbg 03: 寄存器和内存 | ccz-zhao</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">ccz-zhao</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#MiniDbg-03-%E5%AF%84%E5%AD%98%E5%99%A8%E5%92%8C%E5%86%85%E5%AD%98"><span class="nav-number">1.</span> <span class="nav-text">MiniDbg 03: 寄存器和内存</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E2%80%9C%E5%AF%84%E5%AD%98%E2%80%9D-%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">1.1.</span> <span class="nav-text">“寄存” 寄存器</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AF%84%E5%AD%98%E5%99%A8%E6%93%8D%E4%BD%9C"><span class="nav-number">1.1.1.</span> <span class="nav-text">寄存器操作</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B0%83%E8%AF%95%E5%99%A8%E6%B7%BB%E5%8A%A0%E5%AF%B9%E5%AF%84%E5%AD%98%E5%99%A8%E6%94%AF%E6%8C%81"><span class="nav-number">1.2.</span> <span class="nav-text">调试器添加对寄存器支持</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%B9%E5%86%85%E5%AD%98%E6%94%AF%E6%8C%81%E8%AF%BB%E5%86%99"><span class="nav-number">1.3.</span> <span class="nav-text">对内存支持读写</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%8C%E5%96%84-continue"><span class="nav-number">1.4.</span> <span class="nav-text">完善 continue</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95"><span class="nav-number">1.5.</span> <span class="nav-text">测试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#reference"><span class="nav-number">1.6.</span> <span class="nav-text">reference</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">zhao</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">5</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/04/11/minidbg03/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="zhao">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ccz-zhao">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="MiniDbg 03: 寄存器和内存 | ccz-zhao">
+      <meta itemprop="description" content="动手从零开始构建一个Linux系统下的Debugger，支持对寄存器和内存的读写">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MiniDbg 03: 寄存器和内存
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+      
+
+      <time title="创建时间：2023-04-11 10:25:28 / 修改时间：20:04:06" itemprop="dateCreated datePublished" datetime="2023-04-11T10:25:28+08:00">2023-04-11</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/projects/" itemprop="url" rel="index"><span itemprop="name">projects</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">动手从零开始构建一个Linux系统下的Debugger，支持对寄存器和内存的读写</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h2 id="MiniDbg-03-寄存器和内存"><a href="#MiniDbg-03-寄存器和内存" class="headerlink" title="MiniDbg 03: 寄存器和内存"></a>MiniDbg 03: 寄存器和内存</h2><p>在上一篇文章中，我们为调试器添加了简单的地址断点。这一次，我们将增加读写寄存器和内存的能力，这将使我们能够使用程序计数器，观察程序运行状态并改变程序的行为。</p>
+<p>代码可见：<a target="_blank" rel="noopener" href="https://github.com/ccz-zhao/MiniDbg/tree/03_register">github</a></p>
+<h3 id="“寄存”-寄存器"><a href="#“寄存”-寄存器" class="headerlink" title="“寄存” 寄存器"></a>“寄存” 寄存器</h3><p>项目实现的平台是 x86_64平台，除了通用和专用寄存器组外，x86_64还提供浮点和矢量寄存器。为了简单起见，先忽略后两种寄存器。x86_64平台下寄存器数据结构可以参见<code>/usr/include/sys/user.h</code>，寄存器的调试信息DWARF编码从 <a target="_blank" rel="noopener" href="https://www.uclibc.org/docs/psABI-x86_64.pdf">System V x86_64 ABI</a> 获取。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">enum class</span> <span class="title class_">reg</span> &#123;</span><br><span class="line">    r15=<span class="number">0</span>, r14, r13, r12,</span><br><span class="line">    rbp, rbx, r11, r10,</span><br><span class="line">    r9, r8, rax, rcx,</span><br><span class="line">    rdx, rsi, rdi, orig_rax,</span><br><span class="line">    rip, cs, eflags, rsp,</span><br><span class="line">    ss, fs_base, gs_base,</span><br><span class="line">    ds, es, fs, gs, REG_NUMS</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">const</span> std::<span class="type">size_t</span> n_registers = <span class="built_in">static_cast</span>&lt;<span class="type">int</span>&gt;(reg::REG_NUMS);</span><br><span class="line"></span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">reg_descriptor</span> &#123;</span><br><span class="line">    reg r;</span><br><span class="line">    <span class="type">int</span> dwarf_r;</span><br><span class="line">    std::string name;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">//have a look in /usr/include/sys/user.h for how to lay this out</span></span><br><span class="line"><span class="type">static</span> <span class="type">const</span> std::array&lt;reg_descriptor, n_registers&gt; g_register_descriptors &#123;&#123;</span><br><span class="line">        &#123; reg::r15, <span class="number">15</span>, <span class="string">&quot;r15&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::r14, <span class="number">14</span>, <span class="string">&quot;r14&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::r13, <span class="number">13</span>, <span class="string">&quot;r13&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::r12, <span class="number">12</span>, <span class="string">&quot;r12&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::rbp, <span class="number">6</span>, <span class="string">&quot;rbp&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::rbx, <span class="number">3</span>, <span class="string">&quot;rbx&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::r11, <span class="number">11</span>, <span class="string">&quot;r11&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::r10, <span class="number">10</span>, <span class="string">&quot;r10&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::r9, <span class="number">9</span>, <span class="string">&quot;r9&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::r8, <span class="number">8</span>, <span class="string">&quot;r8&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::rax, <span class="number">0</span>, <span class="string">&quot;rax&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::rcx, <span class="number">2</span>, <span class="string">&quot;rcx&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::rdx, <span class="number">1</span>, <span class="string">&quot;rdx&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::rsi, <span class="number">4</span>, <span class="string">&quot;rsi&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::rdi, <span class="number">5</span>, <span class="string">&quot;rdi&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::orig_rax, <span class="number">-1</span>, <span class="string">&quot;orig_rax&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::rip, <span class="number">-1</span>, <span class="string">&quot;rip&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::cs, <span class="number">51</span>, <span class="string">&quot;cs&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::eflags, <span class="number">49</span>, <span class="string">&quot;eflags&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::rsp, <span class="number">7</span>, <span class="string">&quot;rsp&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::ss, <span class="number">52</span>, <span class="string">&quot;ss&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::fs_base, <span class="number">58</span>, <span class="string">&quot;fs_base&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::gs_base, <span class="number">59</span>, <span class="string">&quot;gs_base&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::ds, <span class="number">53</span>, <span class="string">&quot;ds&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::es, <span class="number">50</span>, <span class="string">&quot;es&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::fs, <span class="number">54</span>, <span class="string">&quot;fs&quot;</span> &#125;,</span><br><span class="line">        &#123; reg::gs, <span class="number">55</span>, <span class="string">&quot;gs&quot;</span> &#125;,</span><br><span class="line">&#125;&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>定义完寄存器类型后，就可以利用 <code>ptrace</code> 对寄存器进行操作了</p>
+<h4 id="寄存器操作"><a href="#寄存器操作" class="headerlink" title="寄存器操作"></a>寄存器操作</h4><p>现在我们可以编写一组函数来与寄存器进行交互。我们希望能够读取寄存器、写入寄存器、从DWARF寄存器号中检索寄存器，并按名称查找寄存器，反之亦然。</p>
+<ol>
+<li><code>get_register_value</code>:</li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">uint64_t</span> <span class="title">get_register_value</span><span class="params">(<span class="type">pid_t</span> pid, reg r)</span> </span>&#123;</span><br><span class="line">    user_regs_struct regs;</span><br><span class="line">    <span class="built_in">ptrace</span>(PTRACE_GETREGS, pid, <span class="literal">nullptr</span>, &amp;regs);</span><br><span class="line">    <span class="keyword">return</span> *(<span class="built_in">reinterpret_cast</span>&lt;<span class="type">uint64_t</span>*&gt;(&amp;regs) + (<span class="built_in">static_cast</span>&lt;<span class="type">int</span>&gt;(r)));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里通过传给 <code>ptrace</code> 函数 <code>PTRACE_GETREGS</code> ，通过 <code>ptrace</code> 函数将寄存器值存放在我们传进去的 <code>user_regs_struct</code> 对象 <code>regs</code> 里面。利用 <code>r</code> 对象获取我们所需的寄存器在 <code>regs</code> 结构中的索引，并获取其值。</p>
+<ol start="2">
+<li><code>set_register_value</code>:</li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">set_register_value</span><span class="params">(<span class="type">pid_t</span> pid, reg r, <span class="type">uint64_t</span> value)</span> </span>&#123;</span><br><span class="line">    user_regs_struct regs;</span><br><span class="line">    <span class="built_in">ptrace</span>(PTRACE_GETREGS, pid, <span class="literal">nullptr</span>, &amp;regs);</span><br><span class="line">    *(<span class="built_in">reinterpret_cast</span>&lt;<span class="type">uint64_t</span>*&gt;(&amp;regs) + (<span class="built_in">static_cast</span>&lt;<span class="type">int</span>&gt;(r))) = value;</span><br><span class="line">    <span class="built_in">ptrace</span>(PTRACE_SETREGS, pid, <span class="literal">nullptr</span>, &amp;regs);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>同样的，我们可以利用 <code>enum</code> 对象 <code>r</code> 获取我们想要更改的寄存器在 <code>regs</code> 结构中的索引，然后利用 <code>ptrace</code> 系统调用更改寄存器值。</p>
+<ol start="3">
+<li><code>get_register_value_from_dwarf_register</code>:</li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">uint64_t</span> <span class="title">get_register_value_from_dwarf_register</span> <span class="params">(<span class="type">pid_t</span> pid, <span class="type">unsigned</span> regnum)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> it = std::<span class="built_in">find_if</span>(<span class="built_in">begin</span>(g_register_descriptors), <span class="built_in">end</span>(g_register_descriptors),</span><br><span class="line">                            [regnum](<span class="keyword">auto</span>&amp;&amp; rd) &#123; <span class="keyword">return</span> rd.dwarf_r == regnum; &#125;);</span><br><span class="line">    <span class="keyword">if</span> (it == <span class="built_in">end</span>(g_register_descriptors)) &#123;</span><br><span class="line">        <span class="keyword">throw</span> std::out_of_range&#123;<span class="string">&quot;Unknown dwarf register&quot;</span>&#125;;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">get_register_value</span>(pid, it-&gt;r);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol start="4">
+<li><code>get_register_from_name</code>:</li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">reg <span class="title">get_register_from_name</span><span class="params">(<span class="type">const</span> std::string&amp; name)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> it = std::<span class="built_in">find_if</span>(<span class="built_in">begin</span>(g_register_descriptors), <span class="built_in">end</span>(g_register_descriptors),</span><br><span class="line">                            [name](<span class="keyword">auto</span>&amp;&amp; rd) &#123; <span class="keyword">return</span> rd.name == name; &#125;);</span><br><span class="line">    <span class="keyword">if</span> (it == <span class="built_in">end</span>(g_register_descriptors)) &#123;</span><br><span class="line">        <span class="keyword">throw</span> std::out_of_range&#123;<span class="string">&quot;Unknown register name&quot;</span>&#125;;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> it-&gt;r;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这两个函数会进行输入检查，如果输入不在寄存器范围内，会抛出异常。</p>
+<ol start="5">
+<li><code>get_register_name</code>:</li>
+</ol>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">std::string <span class="title">get_register_name</span><span class="params">(reg r)</span> </span>&#123;</span><br><span class="line">    <span class="type">int</span> reg_i = <span class="built_in">static_cast</span>&lt;<span class="type">int</span>&gt;(r);</span><br><span class="line">    <span class="keyword">return</span> g_register_descriptors[reg_i].name;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="调试器添加对寄存器支持"><a href="#调试器添加对寄存器支持" class="headerlink" title="调试器添加对寄存器支持"></a>调试器添加对寄存器支持</h3><p>对寄存器的操作，有打印出寄存器值、读取寄存器值，写入寄存器。将这些新增的功能添加到调试器的 <code>handle_command</code> 函数中，用户可以通过 <code>reg dump</code>，<code>register read rax</code>, <code>r write rax 0x42</code>等进行操作：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">else</span> <span class="keyword">if</span> (<span class="built_in">is_prefix</span>(command, <span class="string">&quot;register&quot;</span>)) &#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">is_prefix</span>(args[<span class="number">1</span>], <span class="string">&quot;dump&quot;</span>)) &#123;</span><br><span class="line">        <span class="built_in">dump_registers</span>();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (<span class="built_in">is_prefix</span>(args[<span class="number">1</span>], <span class="string">&quot;read&quot;</span>)) &#123;</span><br><span class="line">        std::cout &lt;&lt; <span class="built_in">get_register_value</span>(m_pid, <span class="built_in">get_register_from_name</span>(args[<span class="number">2</span>])) &lt;&lt; std::endl;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (<span class="built_in">is_prefix</span>(args[<span class="number">1</span>], <span class="string">&quot;write&quot;</span>)) &#123;</span><br><span class="line">        std::string val&#123;args[<span class="number">3</span>], <span class="number">2</span>&#125;; <span class="comment">//assume 0xVAL</span></span><br><span class="line">        <span class="built_in">set_register_value</span>(m_pid, <span class="built_in">get_register_from_name</span>(args[<span class="number">2</span>]), std::<span class="built_in">stol</span>(val, <span class="number">0</span>, <span class="number">16</span>));</span><br><span class="line">    &#125;</span><br><span class="line">&#125; </span><br></pre></td></tr></table></figure>
+
+<p>对于寄存器的打印，可以利用 <code>iostream</code> 提供的接口，实现对齐等。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">debugger::dump_registers</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="type">bool</span> odd = n_registers % <span class="number">2</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i+<span class="number">1</span> &lt; n_registers; i += <span class="number">2</span>) &#123;</span><br><span class="line">        std::cout &lt;&lt; std::<span class="built_in">setfill</span>(<span class="string">&#x27; &#x27;</span>) &lt;&lt; std::<span class="built_in">setw</span>(<span class="number">16</span>) &lt;&lt; std::left &lt;&lt;  g_register_descriptors[i].name &lt;&lt; <span class="string">&quot; 0x&quot;</span> &lt;&lt; std::right</span><br><span class="line">                  &lt;&lt; std::<span class="built_in">setfill</span>(<span class="string">&#x27;0&#x27;</span>) &lt;&lt; std::<span class="built_in">setw</span>(<span class="number">16</span>) &lt;&lt; std::hex &lt;&lt; <span class="built_in">get_register_value</span>(m_pid, g_register_descriptors[i].r) &lt;&lt; <span class="string">&quot;\t\t&quot;</span>;</span><br><span class="line">        std::cout &lt;&lt; std::<span class="built_in">setfill</span>(<span class="string">&#x27; &#x27;</span>) &lt;&lt; std::<span class="built_in">setw</span>(<span class="number">16</span>) &lt;&lt; std::left &lt;&lt; g_register_descriptors[i+<span class="number">1</span>].name &lt;&lt; <span class="string">&quot; 0x&quot;</span> &lt;&lt; std::right</span><br><span class="line">                  &lt;&lt; std::<span class="built_in">setfill</span>(<span class="string">&#x27;0&#x27;</span>) &lt;&lt; std::<span class="built_in">setw</span>(<span class="number">16</span>) &lt;&lt; std::hex &lt;&lt; <span class="built_in">get_register_value</span>(m_pid, g_register_descriptors[i+<span class="number">1</span>].r) &lt;&lt; std::endl;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (odd) &#123;</span><br><span class="line">        std::cout &lt;&lt; std::<span class="built_in">setfill</span>(<span class="string">&#x27; &#x27;</span>) &lt;&lt; std::<span class="built_in">setw</span>(<span class="number">16</span>) &lt;&lt; std::left &lt;&lt; g_register_descriptors[n_registers<span class="number">-1</span>].name &lt;&lt; <span class="string">&quot; 0x&quot;</span> &lt;&lt; std::right</span><br><span class="line">                  &lt;&lt; std::<span class="built_in">setfill</span>(<span class="string">&#x27;0&#x27;</span>) &lt;&lt; std::<span class="built_in">setw</span>(<span class="number">16</span>) &lt;&lt; std::hex &lt;&lt; <span class="built_in">get_register_value</span>(m_pid, g_register_descriptors[n_registers<span class="number">-1</span>].r) &lt;&lt; std::endl;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="对内存支持读写"><a href="#对内存支持读写" class="headerlink" title="对内存支持读写"></a>对内存支持读写</h3><p>对内存的读写就简单一些，之前设置断点的时候也使用过 <code>ptrace</code> 对内存进行读写。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">uint64_t</span> <span class="title">debugger::read_memory</span><span class="params">(<span class="type">uint64_t</span> address)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">ptrace</span>(PTRACE_PEEKDATA, m_pid, address, <span class="literal">nullptr</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">debugger::write_memory</span><span class="params">(<span class="type">uint64_t</span> address, <span class="type">uint64_t</span> value)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">ptrace</span>(PTRACE_POKEDATA, m_pid, address, value);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>添加到调试器的 <code>handle_command</code> 函数中</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">else</span> <span class="keyword">if</span>(<span class="built_in">is_prefix</span>(command, <span class="string">&quot;memory&quot;</span>)) &#123;</span><br><span class="line">    std::string addr &#123;args[<span class="number">2</span>], <span class="number">2</span>&#125;; <span class="comment">//assume 0xADDRESS</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">is_prefix</span>(args[<span class="number">1</span>], <span class="string">&quot;read&quot;</span>)) &#123;</span><br><span class="line">        std::cout &lt;&lt; std::hex &lt;&lt; <span class="built_in">read_memory</span>(std::<span class="built_in">stol</span>(addr, <span class="number">0</span>, <span class="number">16</span>)) &lt;&lt; std::endl;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">is_prefix</span>(args[<span class="number">1</span>], <span class="string">&quot;write&quot;</span>)) &#123;</span><br><span class="line">        std::string val &#123;args[<span class="number">3</span>], <span class="number">2</span>&#125;; <span class="comment">//assume 0xVAL</span></span><br><span class="line">        <span class="built_in">write_memory</span>(std::<span class="built_in">stol</span>(addr, <span class="number">0</span>, <span class="number">16</span>), std::<span class="built_in">stol</span>(val, <span class="number">0</span>, <span class="number">16</span>));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="完善-continue"><a href="#完善-continue" class="headerlink" title="完善 continue"></a>完善 continue</h3><p>前面实现的断点功能断点设置在内存中，会被反复命中，使用 <code>continue</code> 命令没法跳过断点执行。但是现在我们可以获得程序计数器，所以我们可以检查断点映射，看看我们是否处于断点。如果是的话，我们可以禁用断点然后跳过它，继续运行，随后再将其重新设置断点。</p>
+<p>首先，添加几个辅助函数：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">uint64_t</span> <span class="title">debugger::get_pc</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">get_register_value</span>(m_pid, reg::rip);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">debugger::set_pc</span><span class="params">(<span class="type">uint64_t</span> pc)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">set_register_value</span>(m_pid, reg::rip, pc);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>现在就可以完成一个函数跳过断点：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">debugger::step_over_breakpoint</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// - 1 because execution will go past the breakpoint</span></span><br><span class="line">    <span class="keyword">auto</span> possible_breakpoint_location = <span class="built_in">get_pc</span>() - <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (m_breakpoints.<span class="built_in">count</span>(possible_breakpoint_location)) &#123;</span><br><span class="line">        <span class="keyword">auto</span>&amp; bp = m_breakpoints[possible_breakpoint_location];</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (bp.<span class="built_in">is_enabled</span>()) &#123;</span><br><span class="line">            <span class="keyword">auto</span> previous_instruction_address = possible_breakpoint_location;</span><br><span class="line">            <span class="built_in">set_pc</span>(previous_instruction_address);</span><br><span class="line"></span><br><span class="line">            bp.<span class="built_in">disable</span>();</span><br><span class="line">            <span class="built_in">ptrace</span>(PTRACE_SINGLESTEP, m_pid, <span class="literal">nullptr</span>, <span class="literal">nullptr</span>);</span><br><span class="line">            <span class="built_in">wait_for_signal</span>();</span><br><span class="line">            bp.<span class="built_in">enable</span>();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>首先我们检查当前程序计数器PC所在处是否有断点，有的话，将PC设置回断点前，然后禁用断点，步进后再重新设置断点。</p>
+<p><code>wait_for_signal</code>函数封装通用的 <code>waitpid</code>调用：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">debugger::wait_for_signal</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="type">int</span> wait_status;</span><br><span class="line">    <span class="keyword">auto</span> options = <span class="number">0</span>;</span><br><span class="line">    <span class="built_in">waitpid</span>(m_pid, &amp;wait_status, options);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>最后重写的 <code>continue_execution</code> 函数如下：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">debugger::continue_execution</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="built_in">step_over_breakpoint</span>();</span><br><span class="line">    <span class="built_in">ptrace</span>(PTRACE_CONT, m_pid, <span class="literal">nullptr</span>, <span class="literal">nullptr</span>);</span><br><span class="line">    <span class="built_in">wait_for_signal</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><ol>
+<li>打印寄存器表</li>
+</ol>
+<p>编译运行后，使用 <code>register dump</code> 即可打印寄存器表（也可使用简写的 <code>reg</code> 等）</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">minidbg&gt; reg dump</span><br><span class="line">r15              0x00007fb2fc7ee600             r14              0x00007fb2fc658057</span><br><span class="line">r13              0x0000000000000001             r12              0x000055bf5c3470c0</span><br><span class="line">rbp              0x000055bf5c3470c8             rbx              0x000055bf5c3470c0</span><br><span class="line">r11              0x0000000000000003             r10              0x000055bf5c346978</span><br><span class="line">r9               0x00007ffc0df5dae0             r8               0x00007fb2fcd2ebd4</span><br><span class="line">rax              0x000055bf5c34012b             rcx              0x0000108000000008</span><br><span class="line">rdx              0x00007ffc0df5daf0             rsi              0x000055bf5c338a0c</span><br><span class="line">rdi              0x000000085c347501             orig_rax         0x000055bf5c3470e0</span><br><span class="line">rip              0x00007ffc0df5db20             cs               0x000055bf5c338aab</span><br><span class="line">eflags           0x000000080000004a             rsp              0x000055bf5c3470c8</span><br><span class="line">ss               0x000055bf5c34012b             fs_base          0x000010885c3470c0</span><br><span class="line">gs_base          0x0000000000000016             ds               0x000055bf5c347320</span><br><span class="line">es               0x00007ffc0df5db50             fs               0x000055bf5c338dbd</span><br><span class="line">gs               0x000000000000001a</span><br><span class="line">minidbg&gt; </span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>断点功能与continue功能</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$./bin/minidbg ./bin/hello</span><br><span class="line">Started debugging process 90430</span><br><span class="line">minidbg&gt; b 0x555555555198</span><br><span class="line">Set breakpoint at address 0x555555555198</span><br><span class="line">minidbg&gt; c</span><br><span class="line">minidbg&gt; c</span><br><span class="line">Hello worldminidbg&gt; </span><br></pre></td></tr></table></figure>
+
+<p>现在使用<code>continue</code>可以跳过断点执行了</p>
+<h3 id="reference"><a href="#reference" class="headerlink" title="reference"></a>reference</h3><p><a target="_blank" rel="noopener" href="https://blog.tartanllama.xyz/writing-a-linux-debugger-registers/">Writing a Linux Debugger</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/minidbg/" rel="tag"># minidbg</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/04/10/minidbg02/" rel="prev" title="MiniDbg 02: 支持断点breakpoint">
+                  <i class="fa fa-chevron-left"></i> MiniDbg 02: 支持断点breakpoint
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">zhao</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

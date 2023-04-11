@@ -27,7 +27,7 @@
 <meta property="og:description" content="动手从零开始构建一个Linux系统下的Debugger，完成环境创建和支持 continue 命令">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2023-04-10T12:28:24.000Z">
-<meta property="article:modified_time" content="2023-04-10T13:03:03.031Z">
+<meta property="article:modified_time" content="2023-04-10T14:43:19.792Z">
 <meta property="article:author" content="zhao">
 <meta property="article:tag" content="minidbg">
 <meta name="twitter:card" content="summary">
@@ -105,7 +105,7 @@
       <div class="sidebar-panel-container">
         <!--noindex-->
         <div class="post-toc-wrap sidebar-panel">
-            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#MiniDbg"><span class="nav-number">1.</span> <span class="nav-text">MiniDbg</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">1.1.</span> <span class="nav-text">环境搭建</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#fork-%E5%87%BA%E8%B0%83%E8%AF%95%E8%BF%9B%E7%A8%8B"><span class="nav-number">1.2.</span> <span class="nav-text">fork 出调试进程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BB%E8%BF%9B%E7%A8%8B%E8%BF%9B%E8%A1%8C%E5%BE%AA%E7%8E%AF%E8%B0%83%E8%AF%95%E5%B7%A5%E4%BD%9C"><span class="nav-number">1.3.</span> <span class="nav-text">主进程进行循环调试工作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%84%E7%90%86%E5%91%BD%E4%BB%A4%E8%A1%8C%E8%BE%93%E5%85%A5"><span class="nav-number">1.4.</span> <span class="nav-text">处理命令行输入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%AF%E6%8C%81-continue-%E5%91%BD%E4%BB%A4"><span class="nav-number">1.5.</span> <span class="nav-text">支持 continue 命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#reference"><span class="nav-number">1.6.</span> <span class="nav-text">reference</span></a></li></ol></li></ol></div>
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#MiniDbg01-setup-amp-continue"><span class="nav-number">1.</span> <span class="nav-text">MiniDbg01: setup &amp; continue</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">1.1.</span> <span class="nav-text">环境搭建</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#fork-%E5%87%BA%E8%B0%83%E8%AF%95%E8%BF%9B%E7%A8%8B"><span class="nav-number">1.2.</span> <span class="nav-text">fork 出调试进程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BB%E8%BF%9B%E7%A8%8B%E8%BF%9B%E8%A1%8C%E5%BE%AA%E7%8E%AF%E8%B0%83%E8%AF%95%E5%B7%A5%E4%BD%9C"><span class="nav-number">1.3.</span> <span class="nav-text">主进程进行循环调试工作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%84%E7%90%86%E5%91%BD%E4%BB%A4%E8%A1%8C%E8%BE%93%E5%85%A5"><span class="nav-number">1.4.</span> <span class="nav-text">处理命令行输入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%94%AF%E6%8C%81-continue-%E5%91%BD%E4%BB%A4"><span class="nav-number">1.5.</span> <span class="nav-text">支持 continue 命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#reference"><span class="nav-number">1.6.</span> <span class="nav-text">reference</span></a></li></ol></li></ol></div>
         </div>
         <!--/noindex-->
 
@@ -118,13 +118,13 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-count">4</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-count">3</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
@@ -186,7 +186,16 @@
       <span class="post-meta-item-text">发表于</span>
       
 
-      <time title="创建时间：2023-04-10 20:28:24 / 修改时间：21:03:03" itemprop="dateCreated datePublished" datetime="2023-04-10T20:28:24+08:00">2023-04-10</time>
+      <time title="创建时间：2023-04-10 20:28:24 / 修改时间：22:43:19" itemprop="dateCreated datePublished" datetime="2023-04-10T20:28:24+08:00">2023-04-10</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/projects/" itemprop="url" rel="index"><span itemprop="name">projects</span></a>
+        </span>
     </span>
 
   
@@ -200,7 +209,7 @@
     
     
     <div class="post-body" itemprop="articleBody">
-        <h2 id="MiniDbg"><a href="#MiniDbg" class="headerlink" title="MiniDbg"></a>MiniDbg</h2><p>动手写一个Linux 系统下的调试器。基本原理是利用系统调用 <code>ptrace</code> 来实现。利用 <code>fork/exec</code> 创建子进程， <code>ptrace</code> 系统调用允许我们通过读取寄存器、读取内存、单步执行等方式来观察和控制另一个进程的执行。</p>
+        <h2 id="MiniDbg01-setup-amp-continue"><a href="#MiniDbg01-setup-amp-continue" class="headerlink" title="MiniDbg01: setup &amp; continue"></a>MiniDbg01: setup &amp; continue</h2><p>动手写一个Linux 系统下的调试器。基本原理是利用系统调用 <code>ptrace</code> 来实现。利用 <code>fork/exec</code> 创建子进程， <code>ptrace</code> 系统调用允许我们通过读取寄存器、读取内存、单步执行等方式来观察和控制另一个进程的执行。</p>
 <p>代码可见：<a target="_blank" rel="noopener" href="https://github.com/ccz-zhao/MiniDbg/tree/set_up_continue">github</a></p>
 <h3 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h3><p>所需两个第三方库：</p>
 <ul>
@@ -264,6 +273,9 @@
                 </a>
             </div>
             <div class="post-nav-item">
+                <a href="/2023/04/10/minidbg02/" rel="next" title="MiniDbg 02: 支持断点breakpoint">
+                  MiniDbg 02: 支持断点breakpoint <i class="fa fa-chevron-right"></i>
+                </a>
             </div>
           </div>
     </footer>

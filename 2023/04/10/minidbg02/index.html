@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha256-HtsXJanqjKTc8vVQjO4YMhiqFoXkfBsjBWcX91T1jr8=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.15.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":{"enable":false,"style":null},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="动手从零开始构建一个Linux系统下的Debugger，完成断点功能，支持对地址打断点">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MiniDbg 02: 支持断点breakpoint">
+<meta property="og:url" content="http://example.com/2023/04/10/minidbg02/">
+<meta property="og:site_name" content="ccz-zhao">
+<meta property="og:description" content="动手从零开始构建一个Linux系统下的Debugger，完成断点功能，支持对地址打断点">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/2023/04/10/minidbg02/breakpoint.png">
+<meta property="article:published_time" content="2023-04-10T14:40:49.000Z">
+<meta property="article:modified_time" content="2023-04-11T02:17:58.854Z">
+<meta property="article:author" content="zhao">
+<meta property="article:tag" content="minidbg">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2023/04/10/minidbg02/breakpoint.png">
+
+
+<link rel="canonical" href="http://example.com/2023/04/10/minidbg02/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"http://example.com/2023/04/10/minidbg02/","path":"2023/04/10/minidbg02/","title":"MiniDbg 02: 支持断点breakpoint"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>MiniDbg 02: 支持断点breakpoint | ccz-zhao</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">ccz-zhao</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#MiniDbg02-breakpoint"><span class="nav-number">1.</span> <span class="nav-text">MiniDbg02: breakpoint</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E8%A1%A8%E7%A4%BA%E6%96%AD%E7%82%B9"><span class="nav-number">1.1.</span> <span class="nav-text">如何表示断点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E8%BD%AF%E4%BB%B6%E4%B8%AD%E6%96%AD%E5%A4%84%E7%90%86%E7%B1%BB"><span class="nav-number">1.2.</span> <span class="nav-text">实现软件中断处理类</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#debugger-%E7%B1%BB%E6%B7%BB%E5%8A%A0-breakpoint-%E7%B1%BB"><span class="nav-number">1.3.</span> <span class="nav-text">debugger 类添加 breakpoint 类</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95%E6%96%AD%E7%82%B9%E5%8A%9F%E8%83%BD"><span class="nav-number">1.4.</span> <span class="nav-text">测试断点功能</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%BF%9B%E8%A1%8C%E6%B5%8B%E8%AF%95"><span class="nav-number">1.4.1.</span> <span class="nav-text">进行测试</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%8E%E7%BB%AD%E5%B7%A5%E4%BD%9C"><span class="nav-number">1.5.</span> <span class="nav-text">后续工作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#references"><span class="nav-number">1.6.</span> <span class="nav-text">references</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">zhao</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">4</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/04/10/minidbg02/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="zhao">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="ccz-zhao">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="MiniDbg 02: 支持断点breakpoint | ccz-zhao">
+      <meta itemprop="description" content="动手从零开始构建一个Linux系统下的Debugger，完成断点功能，支持对地址打断点">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MiniDbg 02: 支持断点breakpoint
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-04-10 22:40:49" itemprop="dateCreated datePublished" datetime="2023-04-10T22:40:49+08:00">2023-04-10</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2023-04-11 10:17:58" itemprop="dateModified" datetime="2023-04-11T10:17:58+08:00">2023-04-11</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/projects/" itemprop="url" rel="index"><span itemprop="name">projects</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+            <div class="post-description">动手从零开始构建一个Linux系统下的Debugger，完成断点功能，支持对地址打断点</div>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h2 id="MiniDbg02-breakpoint"><a href="#MiniDbg02-breakpoint" class="headerlink" title="MiniDbg02: breakpoint"></a>MiniDbg02: breakpoint</h2><p>前面完成了一个小型的进程启动器，作为调试器基础，现在需要开始对断点功能进行支持。我们先了解断点在x86 Linux中如何工作，给MiniDbg添加一个设置断点的功能。</p>
+<p>代码可见：<a target="_blank" rel="noopener" href="https://github.com/ccz-zhao/MiniDbg/tree/02_breakpoint">github</a></p>
+<h3 id="如何表示断点"><a href="#如何表示断点" class="headerlink" title="如何表示断点"></a>如何表示断点</h3><p>断点有两种形式：硬件和软件。硬件断点通常涉及设置特定于体系结构的寄存器来生成中断，而软件断点涉及修改正在动态执行的代码。在本文中，我们将只关注软件断点，因为它们更简单，而且可以拥有任意数量的断点。在x86上，一次只能设置四个硬件断点，但它们可以让你在读取或写入给定地址时启动它们，而不仅仅是在那里执行代码。</p>
+<p>上面提到，软件断点是通过动态修改执行代码来设置的，所以问题来了：</p>
+<ul>
+<li>我们如何修改代码？</li>
+<li>我们对设置断点做了哪些修改？</li>
+<li>如何通知调试器？</li>
+</ul>
+<p>第一个问题的答案是<code>ptrace</code>。我们以前曾使用它来设置程序以跟踪并继续执行，但我们也可以使用它来读取和写入内存。</p>
+<p>我们所做的修改必须使处理器执行到断点地址时，停止运行，并向程序发出信号。在x86上，这是通过用<code>int 3</code>指令覆盖该地址的指令来实现的。x86有一个中断向量表，操作系统可以使用它来注册各种事件的处理程序，例如页面故障、保护故障和无效操作码。这有点像注册错误处理回调，但直接在硬件级别。当处理器执行<code>int 3</code>指令时，控制权会传递给断点中断处理程序，在Linux的情况下，断点中断处理会用<code>SIGTRAP</code>向进程发出信号。您可以在下图中看到这个过程，我们用<code>0xcc</code>覆盖<code>mov</code>指令的第一个字节，<code>0xcc</code>是<code>int 3</code>的指令编码。</p>
+<p><img src="/2023/04/10/minidbg02/breakpoint.png"></p>
+<p>最后一个难题是如何通知调试器中断。如果还记得上一篇文章，我们可以使用<code>waitpid</code>来监听发送给被调试对象的信号。我们可以在这里做完全相同的事情：设置断点，继续程序，调用<code>waitpid</code>，等待<code>SIGTRAP</code>发生。然后，可以通过打印已到达的源位置或更改GUI调试器中的焦点行，将此断点传达给用户。</p>
+<h3 id="实现软件中断处理类"><a href="#实现软件中断处理类" class="headerlink" title="实现软件中断处理类"></a>实现软件中断处理类</h3><p>通过一个断点类来表示某个位置上的断点，并且可以根据需要启用或禁用该断点。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">breakpoint</span> &#123;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="keyword">using</span> ptr = std::shared_ptr&lt;breakpoint&gt;;</span><br><span class="line">    <span class="built_in">breakpoint</span>() = <span class="keyword">default</span>;</span><br><span class="line">    <span class="built_in">breakpoint</span>(<span class="type">pid_t</span> pid, std::<span class="type">intptr_t</span> addr) : m_pid&#123;pid&#125;, m_addr&#123;addr&#125;, m_enabled&#123;<span class="literal">false</span>&#125;, m_saved_data&#123;&#125; &#123;&#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">enable</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">disable</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">bool</span> <span class="title">is_enabled</span><span class="params">()</span> <span class="type">const</span> </span>&#123; <span class="keyword">return</span> m_enabled; &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">auto</span> <span class="title">get_address</span><span class="params">()</span> <span class="type">const</span> -&gt; std::<span class="type">intptr_t</span> </span>&#123; <span class="keyword">return</span> m_addr; &#125;</span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    <span class="type">pid_t</span> m_pid;</span><br><span class="line">    std::<span class="type">intptr_t</span> m_addr;</span><br><span class="line">    <span class="type">bool</span> m_enabled;</span><br><span class="line">    <span class="type">uint8_t</span> m_saved_data; <span class="comment">//data which used to be at the breakpoint address</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p><code>enable</code> 和 <code>disable</code> 函数完成了断点功能的具体实现：</p>
+<ul>
+<li><code>enable</code> 将指定地址的指令替换成 <code>int 3</code> 指令，也就是 <code>0xcc</code>。同时需要保存原来的指令，以便后续恢复</li>
+<li><code>disable</code> 将指令恢复成原本的编码</li>
+</ul>
+<p>这两个功能都需要对被调试程序内存地址进行修改，可以使用 <code>ptrace</code> 函数来实现，通过传入 <code>PTRACE_PEEKDATA</code> 或 <code>PTRACE_POKEDATA</code> 请求，以及对应的地址：</p>
+<ul>
+<li><code>PTRACE_PEEKDATA</code>请求获取对应地址上的指令</li>
+<li><code>PTRACE_POKEDATA</code>请求覆盖对应地址上的指令</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">breakpoint::enable</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> data = <span class="built_in">ptrace</span>(PTRACE_PEEKDATA, m_pid, m_addr, <span class="literal">nullptr</span>);</span><br><span class="line">    m_saved_data = <span class="built_in">static_cast</span>&lt;<span class="type">uint8_t</span>&gt;(data &amp; <span class="number">0xff</span>); <span class="comment">//save bottom byte</span></span><br><span class="line">    <span class="type">uint64_t</span> int3 = <span class="number">0xcc</span>;</span><br><span class="line">    <span class="type">uint64_t</span> data_with_int3 = ((data &amp; ~<span class="number">0xff</span>) | int3); <span class="comment">//set bottom byte to 0xcc</span></span><br><span class="line">    <span class="built_in">ptrace</span>(PTRACE_POKEDATA, m_pid, m_addr, data_with_int3);</span><br><span class="line"></span><br><span class="line">    m_enabled = <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">breakpoint::disable</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> data = <span class="built_in">ptrace</span>(PTRACE_PEEKDATA, m_pid, m_addr, <span class="literal">nullptr</span>);</span><br><span class="line">    <span class="keyword">auto</span> restored_data = ((data &amp; ~<span class="number">0xff</span>) | m_saved_data);</span><br><span class="line">    <span class="built_in">ptrace</span>(PTRACE_POKEDATA, m_pid, m_addr, restored_data);</span><br><span class="line"></span><br><span class="line">    m_enabled = <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>使用 <code>std::intptr_t</code> 根据机器类型不同而表现为不同比特数，可以用来表示地址值。</p>
+<h3 id="debugger-类添加-breakpoint-类"><a href="#debugger-类添加-breakpoint-类" class="headerlink" title="debugger 类添加 breakpoint 类"></a>debugger 类添加 breakpoint 类</h3><p>我们将对调试器类进行三次更改，以支持通过用户界面设置断点：</p>
+<ol>
+<li>将断点存储数据结构添加到调试器</li>
+<li>编写<code>set_breakpoint_at_address</code>函数</li>
+<li>在<code>handle_command</code>函数中添加<code>break</code>命令</li>
+</ol>
+<p>把断点存储在<code>std:：unordered_map＜std:：intptr_t，breakpoint::ptr＞</code>结构中，这样可以方便快捷地检查给定地址上是否有断点，如果有，则检索该断点对象。</p>
+<p>其中 <code>breakpoint::ptr</code> 为 breakpoint 类的智能指针。</p>
+<p>在<code>set_breakpoint_at_address</code>中，我们将创建一个新的断点，启用它，将它添加到数据结构中，并为用户打印出一条消息。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">debugger::set_breakpoint_at_address</span><span class="params">(std::<span class="type">intptr_t</span> addr)</span> </span>&#123;</span><br><span class="line">    std::cout &lt;&lt; <span class="string">&quot;Set breakpoint at address 0x&quot;</span> &lt;&lt; std::hex &lt;&lt; addr &lt;&lt; std::endl;</span><br><span class="line">    breakpoint::ptr bp = std::<span class="built_in">make_shared</span>&lt;breakpoint&gt;(m_pid, addr);</span><br><span class="line">    bp-&gt;<span class="built_in">enable</span>();</span><br><span class="line">    m_breakpoints[addr] = bp;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>现在，我们将更新我们的命令处理程序，以调用我们的新函数。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">debugger::handle_command</span><span class="params">(<span class="type">const</span> std::string&amp; line)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">auto</span> args = <span class="built_in">split</span>(line, <span class="string">&#x27; &#x27;</span>);</span><br><span class="line">    <span class="keyword">auto</span> command = args[<span class="number">0</span>];</span><br><span class="line">    <span class="keyword">if</span> (<span class="built_in">is_prefix</span>(command, <span class="string">&quot;continue&quot;</span>)) &#123;</span><br><span class="line">        <span class="built_in">continue_execution</span>();</span><br><span class="line">        </span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span>(<span class="built_in">is_prefix</span>(command, <span class="string">&quot;break&quot;</span>)) &#123;</span><br><span class="line">        std::string <span class="built_in">addr</span>(args[<span class="number">1</span>], <span class="number">2</span>, args[<span class="number">1</span>].<span class="built_in">size</span>()); <span class="comment">//naively assume that the user has written 0xADDRESS</span></span><br><span class="line">        <span class="built_in">set_breakpoint_at_address</span>(std::<span class="built_in">stol</span>(addr, <span class="number">0</span>, <span class="number">16</span>));</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        std::cerr &lt;&lt; <span class="string">&quot;unknow command\n&quot;</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我只是简单地删除了字符串的前两个字符，并对结果调用了<code>std:：stol</code>，以转化为对应的数值。<code>std:：stol</code>可以选择转换基数，这对于十六进制读取很方便。</p>
+<h3 id="测试断点功能"><a href="#测试断点功能" class="headerlink" title="测试断点功能"></a>测试断点功能</h3><p>目前为止，程序仅支持在地址处设置断点，在我们不了解地址情况下设置断点并没有很大用处。未来，我们将增加在函数名或源代码行上设置断点的功能，但目前，我们可以手动解决。</p>
+<p>测试调试器的一种方法是编写一个hello-world程序，该程序写入<code>std:：cerr</code>（以避免缓冲），并：</p>
+<ul>
+<li>在对输出运算符的调用上设置断点。如果继续被调试对象，那么执行将停止，而不打印任何内容。</li>
+<li>重新启动调试器，并在运算符调用后设置断点，应该会看到消息被成功打印出来。</li>
+</ul>
+<p>查找地址的一种方法是使用<code>objdump</code>。如果打开一个shell并执行<code>objdump -d ＜程序名＞</code>，就可以看到代码的反汇编。然后，找到main函数并找到要在其上设置断点的调用指令。例如，我构建了一个hello-world示例，对其进行了反汇编，寻找<code>main</code>的反汇编：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">0000000000001189 &lt;main&gt;:</span><br><span class="line">    1189:       f3 0f 1e fa             endbr64 </span><br><span class="line">    118d:       55                      push   %rbp</span><br><span class="line">    118e:       48 89 e5                mov    %rsp,%rbp</span><br><span class="line">    1191:       48 8d 35 6c 0e 00 00    lea    0xe6c(%rip),%rsi        # 2004 &lt;_IO_stdin_used+0x4&gt;</span><br><span class="line">    1198:       48 8d 3d 81 2e 00 00    lea    0x2e81(%rip),%rdi        # 4020 &lt;_ZSt4cerr@@GLIBCXX_3.4&gt;</span><br><span class="line">    119f:       e8 dc fe ff ff          callq  1080 &lt;_ZStlsISt11char_traitsIcEERSt13basic_ostreamIcT_ES5_PKc@plt&gt;</span><br><span class="line">    11a4:       b8 00 00 00 00          mov    $0x0,%eax</span><br><span class="line">    11a9:       5d                      pop    %rbp</span><br><span class="line">    11aa:       c3                      retq   </span><br></pre></td></tr></table></figure>
+
+<p>可以看到，程序<code>1198</code> 到 <code>119f</code> 完成了对输出函数的调用以及打印功能。</p>
+<p>但是这些地址并非程序运行时代码所处的真正地址。如果程序被编译为与位置无关的可执行文件，那么这些地址是从加载二进制文件的地址开始偏移的。而且由于地址空间布局的随机化，这个加载地址将随着程序的每次运行而改变。</p>
+<p>解决方法是：</p>
+<ul>
+<li>在调用<code>execute_debugee</code>方法前，调用<code>personality</code>方法，禁用地址空间布局随机化。</li>
+<li>运行调试程序，并通过被调试进程的pid，通过查看 <code>/proc/&lt;pid&gt;/maps </code> 查看加载地址。</li>
+</ul>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (pid == <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="comment">//child</span></span><br><span class="line">    <span class="built_in">personality</span>(ADDR_NO_RANDOMIZE);</span><br><span class="line">    <span class="built_in">execute_debugee</span>(prog);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="进行测试"><a href="#进行测试" class="headerlink" title="进行测试"></a>进行测试</h4><ol>
+<li>运行调试程序，并开始调试hello-world程序：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$./bin/minidbg ./bin/hello</span><br><span class="line">Started debugging process 45000</span><br><span class="line">minidbg&gt; </span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>查找子进程的映射地址</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">$cat /proc/45000/maps</span><br><span class="line">555555554000-555555555000 r--p 00000000 103:04 1239017                   /media/ccz/code/Codefield/MiniDbg/bin/hello</span><br><span class="line">555555555000-555555556000 r-xp 00001000 103:04 1239017                   /media/ccz/code/Codefield/MiniDbg/bin/hello</span><br><span class="line">555555556000-555555557000 r--p 00002000 103:04 1239017                   /media/ccz/code/Codefield/MiniDbg/bin/hello</span><br><span class="line">555555557000-555555559000 rw-p 00002000 103:04 1239017                   /media/ccz/code/Codefield/MiniDbg/bin/hello</span><br><span class="line">7ffff7fbf000-7ffff7fc2000 r--p 00000000 00:00 0                          [vvar]</span><br><span class="line">7ffff7fc2000-7ffff7fc3000 r-xp 00000000 00:00 0                          [vdso]</span><br><span class="line">7ffff7fc3000-7ffff7fc5000 r--p 00000000 103:07 6304043                   /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</span><br><span class="line">7ffff7fc5000-7ffff7fef000 r-xp 00002000 103:07 6304043                   /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</span><br><span class="line">7ffff7fef000-7ffff7ffa000 r--p 0002c000 103:07 6304043                   /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</span><br><span class="line">7ffff7ffb000-7ffff7fff000 rw-p 00037000 103:07 6304043                   /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2</span><br><span class="line">7ffffffdd000-7ffffffff000 rw-p 00000000 00:00 0                          [stack]</span><br><span class="line">ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0                  [vsyscall]</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>开始测试断点</li>
+</ol>
+<p>将断点打在 程序地址 <code>1198</code> 处，程序将在打印输出前中断</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">minidbg&gt; b 0x555555555198</span><br><span class="line">Set breakpoint at address 0x555555555198</span><br><span class="line">minidbg&gt; c</span><br><span class="line">minidbg&gt; </span><br></pre></td></tr></table></figure>
+
+<p>重新启动程序，将断点打在地址 <code>11a4</code> 处，程序在打印输出后中断，因此可以看到输出</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">minidbg&gt; b 0x5555555551a4</span><br><span class="line">Set breakpoint at address 0x5555555551a4</span><br><span class="line">minidbg&gt; c</span><br><span class="line">Hello worldminidbg&gt; </span><br></pre></td></tr></table></figure>
+
+<h3 id="后续工作"><a href="#后续工作" class="headerlink" title="后续工作"></a>后续工作</h3><p>目前仅支持对于地址打断点，并且断点设置在内存中，会被反复命中，比较繁琐且不易使用，后续将支持在函数名或源代码行进行设置断点的功能。</p>
+<h3 id="references"><a href="#references" class="headerlink" title="references"></a>references</h3><p><a target="_blank" rel="noopener" href="https://blog.tartanllama.xyz/writing-a-linux-debugger-breakpoints/">Writing a Linux Debugger</a></p>
+<p><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Position-independent_code">position independent executable</a></p>
+<p><a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Address_space_layout_randomization">address space layout randomization</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/minidbg/" rel="tag"># minidbg</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/04/10/minidbg01/" rel="prev" title="MiniDbg 01: 环境搭建 & 支持continue">
+                  <i class="fa fa-chevron-left"></i> MiniDbg 01: 环境搭建 & 支持continue
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">zhao</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
